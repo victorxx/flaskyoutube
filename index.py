@@ -10,7 +10,7 @@ app.secret_key = 'sua_chave_secreta_aqui'
 
 VIDEO_FILE = 'videos.json'
 ADMIN_PASSWORD = 'helena'
-VIDEOS_POR_PAGINA = 6
+VIDEOS_POR_PAGINA = 10
 
 # Funções auxiliares
 def carregar_videos():
@@ -35,6 +35,7 @@ def render_page(content, **kwargs):
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ title }}</title>
+       
         <meta name="description" content="{{ description }}">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     </head>
@@ -59,31 +60,67 @@ def index(pagina=1):
     videos_pagina = videos[inicio:fim]
 
     content = '''
-    <h1 class="mb-4">🎬 Galeria de Vídeos</h1>
-    <div class="row">
-    {% for video in videos %}
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">{{ video.title }}</h5>
-                    <iframe class="w-100 mb-3" height="315" src="{{ video.url }}" frameborder="0" allowfullscreen></iframe>
-                    <p class="card-text">{{ video.description }}</p>
-                    <a href="{{ url_for('ver_video', slug=video.slug) }}" class="btn btn-sm btn-outline-primary">Ver Página</a>
-                </div>
-            </div>
-        </div>
-    {% endfor %}
-    </div>
-    <nav>
-      <ul class="pagination justify-content-center">
-        {% for p in range(1, total_paginas + 1) %}
-          <li class="page-item {% if p == pagina %}active{% endif %}">
-            <a class="page-link" href="{{ url_for('index', pagina=p) }}">{{ p }}</a>
-          </li>
-        {% endfor %}
-      </ul>
-    </nav>
-    <a class="btn btn-primary mt-3" href="{{ url_for('login') }}">Login Admin</a>
+                            <h1 class="mb-4 text-center">🎬 Galeria de Vídeos</h1>
+
+                        <!-- Anúncio/Propaganda -->
+                        <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                📢 Publicidade
+                            </div>
+                            <div class="card-body p-0">
+                                <iframe 
+                                src="https://espiritosantoes-com-brprincipal.pages.dev/" 
+                                width="100%" 
+                                height="250" 
+                                style="border: none;"
+                                title="Publicidade">
+                                </iframe>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+
+                        <!-- Lista de Vídeos -->
+                        <div class="row">
+                        {% for video in videos %}
+                            <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">{{ video.title }}</h5>
+                                
+                                <div class="ratio ratio-16x9 mb-3">
+                                    <iframe src="{{ video.url }}" frameborder="0" allowfullscreen></iframe>
+                                </div>
+
+                                <p class="card-text flex-grow-1">{{ video.description }}</p>
+
+                                <a href="{{ url_for('ver_video', slug=video.slug) }}" class="btn btn-sm btn-outline-primary mt-auto">Ver Página</a>
+                                </div>
+                            </div>
+                            </div>
+                        {% endfor %}
+                        </div>
+
+                        <!-- Paginação -->
+                        {% if total_paginas > 1 %}
+                        <nav aria-label="Navegação de página">
+                        <ul class="pagination justify-content-center">
+                            {% for p in range(1, total_paginas + 1) %}
+                            <li class="page-item {% if p == pagina %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('index', pagina=p) }}">{{ p }}</a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        </nav>
+                        {% endif %}
+
+                        <!-- Botão de Login -->
+                        <div class="text-center mt-4">
+                        <a class="btn btn-primary" href="{{ url_for('login') }}">Login Admin</a>
+                        </div>
+
     '''
     return render_page(render_template_string(content, videos=videos_pagina, pagina=pagina, total_paginas=total_paginas), 
                       title="Galeria de Vídeos", 
