@@ -1,5 +1,7 @@
 from flask import Flask, request, redirect, url_for, session, abort, render_template_string
-import json, os, re
+import json
+import os
+import re
 from math import ceil
 from slugify import slugify  # pip install python-slugify
 
@@ -10,20 +12,21 @@ VIDEO_FILE = 'videos.json'
 ADMIN_PASSWORD = 'helena'
 VIDEOS_POR_PAGINA = 10
 
-# Helpers
+# Funções auxiliares
 def carregar_videos():
     if os.path.exists(VIDEO_FILE):
-        with open(VIDEO_FILE, 'r') as f:
+        with open(VIDEO_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     return []
 
 def salvar_videos(videos):
-    with open(VIDEO_FILE, 'w') as f:
-        json.dump(videos, f, indent=2)
+    with open(VIDEO_FILE, 'w', encoding='utf-8') as f:
+        json.dump(videos, f, indent=4, ensure_ascii=False)
 
 def gerar_slug(titulo):
     return slugify(titulo)
 
+# Layout base
 def render_page(content, **kwargs):
     base_html = '''
     <!doctype html>
@@ -56,25 +59,46 @@ def index(pagina=1):
     videos_pagina = videos[inicio:fim]
 
     content = '''
-    <h1 class="text-center mb-4">🎬 Galeria de Vídeos</h1>
+    <h1 class="mb-4 text-center">🎬 Galeria de Vídeos</h1>
+
     <div class="row">
     {% for video in videos %}
+        <!-- Anúncio antes de cada vídeo -->
+        <div class="col-12 mb-3">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    📢 Publicidade
+                </div>
+                <div class="card-body p-0">
+                    <iframe 
+                        src="https://espiritosantoes-com-brprincipal.pages.dev/" 
+                        width="100%" 
+                        height="400" 
+                        style="border: none;"
+                        title="Publicidade">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloco de vídeo -->
         <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-body d-flex flex-column">
-                    <h5>{{ video.title }}</h5>
+                    <h5 class="card-title">{{ video.title }}</h5>
                     <div class="ratio ratio-16x9 mb-3">
                         <iframe src="{{ video.url }}" frameborder="0" allowfullscreen></iframe>
                     </div>
-                    <p class="flex-grow-1">{{ video.description }}</p>
+                    <p class="card-text flex-grow-1">{{ video.description }}</p>
                     <a href="{{ url_for('ver_video', slug=video.slug) }}" class="btn btn-sm btn-outline-primary mt-auto">Ver Página</a>
                 </div>
             </div>
         </div>
     {% endfor %}
     </div>
+
     {% if total_paginas > 1 %}
-    <nav>
+    <nav aria-label="Navegação de página">
         <ul class="pagination justify-content-center">
         {% for p in range(1, total_paginas + 1) %}
             <li class="page-item {% if p == pagina %}active{% endif %}">
@@ -84,14 +108,18 @@ def index(pagina=1):
         </ul>
     </nav>
     {% endif %}
+
     <div class="text-center mt-4">
-        <a href="{{ url_for('login') }}" class="btn btn-primary">Login Admin</a>
+        <a class="btn btn-primary" href="{{ url_for('login') }}">Login Admin</a>
     </div>
     '''
-    return render_page(render_template_string(content, videos=videos_pagina, pagina=pagina, total_paginas=total_paginas),
-                       title="Galeria de Vídeos", description="Lista de vídeos")
 
-# Página de vídeo individual
+    # Atenção aqui: passe videos_pagina, pagina e total_paginas pro template
+    return render_page(render_template_string(content, videos=videos_pagina, pagina=pagina, total_paginas=total_paginas),
+                       title="Galeria de Vídeos",
+                       description="Vídeos paginados com descrição e SEO")
+
+# Página individual do vídeo
 @app.route('/video/<slug>')
 def ver_video(slug):
     videos = carregar_videos()
@@ -106,28 +134,30 @@ def ver_video(slug):
             return render_page(content, title=video["title"], description=video["description"])
     return abort(404)
 
-# Login
+# Login admin (exemplo mínimo)
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        if request.form.get('senha') == ADMIN_PASSWORD:
+        senha = request.form.get('senha')
+        if senha == ADMIN_PASSWORD:
             session['admin'] = True
             return redirect(url_for('admin'))
-        return "Senha incorreta", 403
+        else:
+            return "Senha incorreta", 403
 
     content = '''
-    <h1>🔐 Login</h1>
-    <form method="post">
+    <h1>🔐 Login do Administrador</h1>
+    <form method="post" class="mt-4">
         <div class="mb-3">
             <label class="form-label">Senha</label>
             <input type="password" name="senha" class="form-control" required>
         </div>
-        <button class="btn btn-success" type="submit">Entrar</button>
+        <button type="submit" class="btn btn-success">Entrar</button>
     </form>
     '''
-    return render_page(content, title="Login", description="Área restrita")
+    return render_page(content, title="Login", description="Área do administrador")
 
-# Admin
+# Painel admin
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if not session.get('admin'):
@@ -141,10 +171,12 @@ def admin():
         description = request.form.get('description', '').strip()
 
         if not re.fullmatch(r"[a-zA-Z0-9_-]{11}", video_id):
-            return "ID do vídeo inválido", 400
+            return "Erro: ID do vídeo inválido", 400
 
         url = f"https://www.youtube.com/embed/{video_id}"
         slug = gerar_slug(title)
+
+        # Evita slugs repetidos
         if any(v.get("slug") == slug for v in videos):
             slug += f"-{len(videos)}"
 
@@ -152,38 +184,50 @@ def admin():
             "title": title,
             "url": url,
             "description": description,
-            "slug": slug
+            "slug": slug,
+            "admin": True
         })
         salvar_videos(videos)
         return redirect(url_for('admin'))
 
     content = '''
-    <h1>📥 Adicionar Vídeo</h1>
-    <form method="post">
-        <input name="title" placeholder="Título" class="form-control mb-2" required>
-        <input name="video_id" placeholder="ID do YouTube (ex: dQw4w9WgXcQ)" class="form-control mb-2" required>
-        <textarea name="description" placeholder="Descrição" class="form-control mb-3" required></textarea>
-        <button class="btn btn-primary">Adicionar</button>
+    <h1>📥 Adicionar Novo Vídeo</h1>
+    <form method="post" class="mb-5">
+        <div class="mb-3">
+            <label class="form-label">Título</label>
+            <input type="text" name="title" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">ID do vídeo (YouTube)</label>
+            <input type="text" name="video_id" class="form-control" required placeholder="Ex: dQw4w9WgXcQ">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Descrição</label>
+            <textarea name="description" class="form-control" rows="3" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Adicionar</button>
         <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary ms-2">Sair</a>
     </form>
-    <h2 class="mt-4">Vídeos Existentes</h2>
+
+    <h2>📄 Vídeos Existentes</h2>
     <ul class="list-group">
-    {% for v in videos %}
+    {% for video in videos %}
         <li class="list-group-item">
-            <strong>{{ v.title }}</strong><br>
-            <small>{{ v.url }}</small><br>
-            <code>{{ url_for('ver_video', slug=v.slug) }}</code>
+            <strong>{{ video.title }}</strong><br>
+            <small>{{ video.url }}</small><br>
+            <em>{{ video.description }}</em><br>
+            <code>{{ url_for('ver_video', slug=video.slug) }}</code>
         </li>
     {% endfor %}
     </ul>
     '''
-    return render_page(render_template_string(content, videos=videos), title="Admin", description="Gerenciar vídeos")
+    return render_page(render_template_string(content, videos=videos), title="Administração", description="Painel Admin")
 
+# Logout
 @app.route('/logout')
 def logout():
     session.pop('admin', None)
     return redirect(url_for('index'))
 
-# Para rodar no Replit
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(debug=True)
