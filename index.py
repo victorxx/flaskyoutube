@@ -12,7 +12,8 @@ VIDEO_FILE = 'videos.json'
 ADMIN_PASSWORD = 'helena'
 VIDEOS_POR_PAGINA = 10
 
-# Funções auxiliares
+# --- Funções auxiliares ---
+
 def carregar_videos():
     if os.path.exists(VIDEO_FILE):
         with open(VIDEO_FILE, 'r', encoding='utf-8') as f:
@@ -26,7 +27,8 @@ def salvar_videos(videos):
 def gerar_slug(titulo):
     return slugify(titulo)
 
-# Layout base
+# --- Layout base com Bootstrap ---
+
 def render_page(content, **kwargs):
     base_html = '''
     <!doctype html>
@@ -47,7 +49,8 @@ def render_page(content, **kwargs):
     '''
     return render_template_string(base_html, content=content, **kwargs)
 
-# Página principal com paginação
+# --- Página principal com paginação e propaganda no topo ---
+
 @app.route('/')
 @app.route('/page/<int:pagina>')
 def index(pagina=1):
@@ -61,65 +64,63 @@ def index(pagina=1):
     content = '''
     <h1 class="mb-4 text-center">🎬 Galeria de Vídeos</h1>
 
+    <!-- Propaganda única no topo da página -->
+    <div class="mb-4">
+      <div class="card border-warning">
+        <div class="card-header bg-warning text-dark">
+          📢 Publicidade
+        </div>
+        <div class="card-body p-0">
+          <iframe 
+              src="https://espiritosantoes-com-brprincipal.pages.dev/" 
+              width="100%" 
+              height="300" 
+              style="border: none;"
+              title="Publicidade">
+          </iframe>
+        </div>
+      </div>
+    </div>
+
     <div class="row">
     {% for video in videos %}
-        <!-- Anúncio antes de cada vídeo -->
-        <div class="col-12 mb-3">
-            <div class="card border-warning">
-                <div class="card-header bg-warning text-dark">
-                    📢 Publicidade
-                </div>
-                <div class="card-body p-0">
-                    <iframe 
-                        src="https://espiritosantoes-com-brprincipal.pages.dev/" 
-                        width="100%" 
-                        height="400" 
-                        style="border: none;"
-                        title="Publicidade">
-                    </iframe>
-                </div>
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ video.title }}</h5>
+            <div class="ratio ratio-16x9 mb-3">
+              <iframe src="{{ video.url }}" frameborder="0" allowfullscreen></iframe>
             </div>
+            <p class="card-text flex-grow-1">{{ video.description }}</p>
+            <a href="{{ url_for('ver_video', slug=video.slug) }}" class="btn btn-sm btn-outline-primary mt-auto">Ver Página</a>
+          </div>
         </div>
-
-        <!-- Bloco de vídeo -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">{{ video.title }}</h5>
-                    <div class="ratio ratio-16x9 mb-3">
-                        <iframe src="{{ video.url }}" frameborder="0" allowfullscreen></iframe>
-                    </div>
-                    <p class="card-text flex-grow-1">{{ video.description }}</p>
-                    <a href="{{ url_for('ver_video', slug=video.slug) }}" class="btn btn-sm btn-outline-primary mt-auto">Ver Página</a>
-                </div>
-            </div>
-        </div>
+      </div>
     {% endfor %}
     </div>
 
     {% if total_paginas > 1 %}
     <nav aria-label="Navegação de página">
-        <ul class="pagination justify-content-center">
-        {% for p in range(1, total_paginas + 1) %}
-            <li class="page-item {% if p == pagina %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('index', pagina=p) }}">{{ p }}</a>
-            </li>
-        {% endfor %}
-        </ul>
+      <ul class="pagination justify-content-center">
+      {% for p in range(1, total_paginas + 1) %}
+        <li class="page-item {% if p == pagina %}active{% endif %}">
+          <a class="page-link" href="{{ url_for('index', pagina=p) }}">{{ p }}</a>
+        </li>
+      {% endfor %}
+      </ul>
     </nav>
     {% endif %}
 
     <div class="text-center mt-4">
-        <a class="btn btn-primary" href="{{ url_for('login') }}">Login Admin</a>
+      <a class="btn btn-primary" href="{{ url_for('login') }}">Login Admin</a>
     </div>
     '''
-
-    # Atenção aqui: passe videos_pagina, pagina e total_paginas pro template
     return render_page(render_template_string(content, videos=videos_pagina, pagina=pagina, total_paginas=total_paginas),
                        title="Galeria de Vídeos",
                        description="Vídeos paginados com descrição e SEO")
 
-# Página individual do vídeo
+# --- Página individual do vídeo com propaganda no topo ---
+
 @app.route('/video/<slug>')
 def ver_video(slug):
     videos = carregar_videos()
@@ -127,6 +128,25 @@ def ver_video(slug):
         if video.get('slug') == slug:
             content = f'''
             <h1>{video["title"]}</h1>
+
+            <!-- Propaganda no topo -->
+            <div class="mb-4">
+              <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                  📢 Publicidade
+                </div>
+                <div class="card-body p-0">
+                  <iframe 
+                      src="https://espiritosantoes-com-brprincipal.pages.dev/" 
+                      width="100%" 
+                      height="200" 
+                      style="border: none;"
+                      title="Publicidade">
+                  </iframe>
+                </div>
+              </div>
+            </div>
+
             <iframe class="w-100 mb-3" height="400" src="{video["url"]}" frameborder="0" allowfullscreen></iframe>
             <p>{video["description"]}</p>
             <a href="{{{{ url_for('index') }}}}" class="btn btn-secondary">Voltar</a>
@@ -134,7 +154,8 @@ def ver_video(slug):
             return render_page(content, title=video["title"], description=video["description"])
     return abort(404)
 
-# Login admin (exemplo mínimo)
+# --- Login admin ---
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -157,7 +178,8 @@ def login():
     '''
     return render_page(content, title="Login", description="Área do administrador")
 
-# Painel admin
+# --- Painel admin para adicionar vídeos ---
+
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if not session.get('admin'):
@@ -170,13 +192,14 @@ def admin():
         video_id = request.form.get('video_id', '').strip()
         description = request.form.get('description', '').strip()
 
+        # Validar ID do YouTube (11 caracteres alfanum + "-" ou "_")
         if not re.fullmatch(r"[a-zA-Z0-9_-]{11}", video_id):
             return "Erro: ID do vídeo inválido", 400
 
         url = f"https://www.youtube.com/embed/{video_id}"
         slug = gerar_slug(title)
 
-        # Evita slugs repetidos
+        # Evitar slugs repetidos
         if any(v.get("slug") == slug for v in videos):
             slug += f"-{len(videos)}"
 
@@ -223,11 +246,14 @@ def admin():
     '''
     return render_page(render_template_string(content, videos=videos), title="Administração", description="Painel Admin")
 
-# Logout
+# --- Logout ---
+
 @app.route('/logout')
 def logout():
     session.pop('admin', None)
     return redirect(url_for('index'))
+
+# --- Run app ---
 
 if __name__ == '__main__':
     app.run(debug=True)
